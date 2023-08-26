@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package errors
+package errs
 
 // Join returns an error that wraps the given errors.
 // Any nil error values are discarded.

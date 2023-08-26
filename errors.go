@@ -54,7 +54,14 @@
 //	}
 //
 // because the former will succeed if err wraps an *fs.PathError.
-package errors
+package errs
+
+import "fmt"
+
+type Error struct {
+	ErrorRes error
+	ErrorLog error
+}
 
 // New returns an error that formats as the given text.
 // Each call to New returns a distinct error value even if the text is identical.
@@ -71,7 +78,28 @@ func (e *errorString) Error() string {
 	return e.s
 }
 
-type Error struct {
-	ErrorRes error
-	ErrorLog error
+func (err *Error) Error() string {
+	return err.ErrorRes.Error()
+}
+
+func (err *Error) Wrap(msgs ...interface{}) *Error {
+	if err.ErrorRes == nil {
+		return err
+	}
+
+	var message string
+	for _, msg := range msgs {
+		if msg != nil {
+			if message != "" {
+				message += "--->"
+			}
+			message += fmt.Sprint(msg)
+		}
+	}
+
+	if message != "" {
+		err.ErrorLog = New(message + "--->" + err.ErrorRes.Error())
+	}
+
+	return err
 }
