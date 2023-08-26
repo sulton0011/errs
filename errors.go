@@ -59,8 +59,8 @@ package errs
 import "fmt"
 
 type Error struct {
-	ErrorRes error
-	ErrorLog error
+	Err error // error response
+	errorLog error // error logs
 }
 
 // New returns an error that formats as the given text.
@@ -79,12 +79,16 @@ func (e *errorString) Error() string {
 }
 
 func (err *Error) Error() string {
-	return err.ErrorRes.Error()
+	return err.Err.Error()
 }
 
 func (err *Error) Wrap(msgs ...interface{}) *Error {
-	if err.ErrorRes == nil {
+	if err.Err == nil {
 		return err
+	}
+
+	if err.errorLog == nil {
+		err.errorLog = err.Err
 	}
 
 	var message string
@@ -98,7 +102,7 @@ func (err *Error) Wrap(msgs ...interface{}) *Error {
 	}
 
 	if message != "" {
-		err.ErrorLog = New(message + "--->" + err.ErrorRes.Error())
+		err.errorLog = New(message + "--->" + err.errorLog.Error())
 	}
 
 	return err

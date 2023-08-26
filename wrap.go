@@ -16,7 +16,7 @@ import (
 //
 // Unwrap returns nil if the Unwrap method returns []error.
 func Unwrap(err Error) error {
-	u, ok := err.ErrorRes.(interface {
+	u, ok := err.Err.(interface {
 		Unwrap() error
 	})
 	if !ok {
@@ -43,7 +43,7 @@ func Unwrap(err Error) error {
 // an example in the standard library. An Is method should only shallowly
 // compare err and the target and not call Unwrap on either.
 func Is(err, target Error) bool {
-	return errors.Is(err.ErrorRes, target.ErrorRes)
+	return errors.Is(err.Err, target.Err)
 }
 
 // As finds the first error in err's tree that matches target, and if one is found, sets
@@ -64,7 +64,7 @@ func Is(err, target Error) bool {
 // As panics if target is not a non-nil pointer to either a type that implements
 // error, or to any interface type.
 func As(err Error, target any) bool {
-	return errors.As(err.ErrorRes, target)
+	return errors.As(err.Err, target)
 }
 
 // Wrap wraps an error with additional messages.
@@ -73,8 +73,8 @@ func As(err Error, target any) bool {
 // messages from the msgs arguments with the text of the original error.
 // It returns a new error with the combined data.
 // If err is nil, the function returns nil.
-func Wrap(err *Error, msgs ...interface{}) Error {
-	if err.ErrorLog == nil {
+func Wrap(err *error, msgs ...interface{}) error {
+	if err == nil {
 		return *err
 	}
 
@@ -89,11 +89,7 @@ func Wrap(err *Error, msgs ...interface{}) Error {
 	}
 
 	if message != "" {
-		err.ErrorLog = New(message + "--->" + (err.ErrorLog).Error())
-	}
-
-	if err.ErrorRes == nil {
-		err.ErrorRes = err.ErrorLog
+		*err = New(message + "--->" + (*err).Error())
 	}
 
 	return *err
