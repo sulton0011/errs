@@ -5,12 +5,14 @@
 package errs_test
 
 import (
+	// "errors"
 	"errors"
 	"fmt"
 	"testing"
 )
 
 func TestNewEqual(t *testing.T) {
+
 	// Different allocations should not be equal.
 	if errors.New("abc") == errors.New("abc") {
 		t.Errorf(`New("abc") == New("abc")`)
