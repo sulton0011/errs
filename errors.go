@@ -5,7 +5,10 @@
 // because the former will succeed if err wraps an *fs.PathError.
 package errs
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+)
 
 // type Error struct {
 // 	Err error // error response
@@ -58,6 +61,28 @@ func Wrap(e *Error, msgs ...any) error {
 
 	(*e) = err
 	return (*e)
+}
+
+func WrapLog(err *Error, req interface{}, msgs ...interface{}) {
+	if *err == nil {
+		return
+	}
+
+	var message string
+	for _, msg := range msgs {
+		if msg != nil {
+			if message != "" {
+				message += "--->"
+			}
+			message += fmt.Sprint(msg)
+		}
+	}
+
+	log.Print(
+		" | ", message, " |",
+		" request: ", req,
+		" | Error: ", errorlog(*err).errlog,
+	)
 }
 
 func errorlog(e Error) *errorString {
