@@ -20,10 +20,8 @@ func New(text string) Error {
 
 type Error interface {
 	Error() string
-	Wrap(...any) error
 }
 
-// errorString is a trivial implementation of error.
 type errorString struct {
 	errinfo string
 	errlog  string
@@ -33,10 +31,16 @@ func (e *errorString) Error() string {
 	return e.errinfo
 }
 
-func (e *errorString) Wrap(msgs ...any) error {
+func (e *errorString) ErrorLog() *errorString {
+	return e
+}
+
+func Wrap(e *Error, msgs ...any) error {
 	if e == nil {
 		return nil
 	}
+
+	err := errorlog((*e))
 
 	var message string
 	for _, msg := range msgs {
@@ -49,8 +53,24 @@ func (e *errorString) Wrap(msgs ...any) error {
 	}
 
 	if message != "" {
-		e.errlog = message + "--->" + e.errlog
+		err.errlog = message + "--->" + err.errlog
 	}
 
-	return e
+	(*e) = err
+	return (*e)
+}
+
+func errorlog(e Error) *errorString {
+	err, ok := e.(interface {
+		ErrorLog() *errorString
+	})
+
+	if !ok {
+		if e == nil {
+			return nil
+		}
+		return errorlog(New(e.Error()))
+	}
+
+	return err.ErrorLog()
 }

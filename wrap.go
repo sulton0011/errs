@@ -101,7 +101,7 @@ func Wrap1(err *error, msgs ...interface{}) error {
 // messages from the msgs arguments with the text of the original error.
 // It then logs this message along with information about the request and error.
 // If err is nil, the function does not take any action.
-func WrapLog(err *error, req interface{}, msgs ...interface{}) {
+func WrapLog(err *Error, req interface{}, msgs ...interface{}) {
 	if *err == nil {
 		return
 	}
@@ -115,6 +115,8 @@ func WrapLog(err *error, req interface{}, msgs ...interface{}) {
 			message += fmt.Sprint(msg)
 		}
 	}
+
+
 
 	log.Print(
 		message,
