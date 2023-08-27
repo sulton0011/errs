@@ -36,7 +36,7 @@ func (e *errorString) ErrorLog() *errorString {
 }
 
 func Wrap(e *Error, msgs ...any) error {
-	if e == nil {
+	if *e == nil {
 		return nil
 	}
 
