@@ -101,7 +101,7 @@ func Wrap1(err *error, msgs ...interface{}) error {
 // messages from the msgs arguments with the text of the original error.
 // It then logs this message along with information about the request and error.
 // If err is nil, the function does not take any action.
-func WrapLog1(err *Error, req interface{}, msgs ...interface{}) {
+func WrapLog1(err *error, req interface{}, msgs ...interface{}) {
 	if *err == nil {
 		return
 	}

@@ -17,13 +17,10 @@ import (
 
 // New returns an error that formats as the given text.
 // Each call to New returns a distinct error value even if the text is identical.
-func New(text string) Error {
+func New(text string) error {
 	return &errorString{text, text}
 }
 
-type Error interface {
-	Error() string
-}
 
 type errorString struct {
 	errinfo string
@@ -38,7 +35,7 @@ func (e *errorString) ErrorLog() *errorString {
 	return e
 }
 
-func Wrap(e *Error, msgs ...any) error {
+func Wrap(e *error, msgs ...any) error {
 	if *e == nil {
 		return nil
 	}
@@ -63,7 +60,7 @@ func Wrap(e *Error, msgs ...any) error {
 	return (*e)
 }
 
-func WrapLog(err *Error, req interface{}, msgs ...interface{}) {
+func WrapLog(err *error, req interface{}, msgs ...interface{}) {
 	if *err == nil {
 		return
 	}
@@ -85,7 +82,7 @@ func WrapLog(err *Error, req interface{}, msgs ...interface{}) {
 	)
 }
 
-func errorlog(e Error) *errorString {
+func errorlog(e error) *errorString {
 	err, ok := e.(interface {
 		ErrorLog() *errorString
 	})
