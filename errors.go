@@ -21,7 +21,6 @@ func New(text string) error {
 	return &errorString{text, text}
 }
 
-
 type errorString struct {
 	errinfo string
 	errlog  string
@@ -42,18 +41,15 @@ func Wrap(e *error, msgs ...any) error {
 
 	err := errorlog((*e))
 
-	var message string
+	var nonNilMsgs []interface{}
 	for _, msg := range msgs {
 		if msg != nil {
-			if message != "" {
-				message += "--->"
-			}
-			message += fmt.Sprint(msg)
+			nonNilMsgs = append(nonNilMsgs, "--->", msg)
 		}
 	}
 
-	if message != "" {
-		err.errlog = message + "--->" + err.errlog
+	if len(nonNilMsgs) != 0 {
+		err.errlog = fmt.Sprintln(nonNilMsgs[1:]...)
 	}
 
 	(*e) = err
@@ -65,18 +61,15 @@ func WrapLog(err *error, req interface{}, msgs ...interface{}) {
 		return
 	}
 
-	var message string
+	var nonNilMsgs []interface{}
 	for _, msg := range msgs {
 		if msg != nil {
-			if message != "" {
-				message += "--->"
-			}
-			message += fmt.Sprint(msg)
+			nonNilMsgs = append(nonNilMsgs, "--->", msg)
 		}
 	}
 
 	log.Print(
-		" | ", message, " |",
+		" | ", fmt.Sprintln(nonNilMsgs[1:]...), " |",
 		" request: ", req,
 		" | Error: ", errorlog(*err).errlog,
 	)
