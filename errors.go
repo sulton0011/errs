@@ -50,7 +50,7 @@ func Wrap(e *error, msgs ...any) error {
 	}
 
 	if len(nonNilMsgs) != 0 {
-		err.errlog = fmt.Sprintln(nonNilMsgs[1:]...)
+		err.errlog = fmt.Sprint(nonNilMsgs[1:]...)
 	}
 
 	(*e) = err
@@ -70,12 +70,11 @@ func WrapLog(err *error, req interface{}, msgs ...interface{}) {
 	}
 
 	slogs := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		AddSource: true,
 		Level:     slog.LevelError,
 	}))
 
 	slogs.Error(
-		fmt.Sprintln(nonNilMsgs[1:]...),
+		fmt.Sprint(nonNilMsgs[1:]...),
 		slog.String("Error", errorlog(*err).errlog),
 		slog.Any("request", req),
 	)
