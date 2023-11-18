@@ -7,7 +7,8 @@ package errs
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
+	"os"
 )
 
 // type Error struct {
@@ -68,10 +69,15 @@ func WrapLog(err *error, req interface{}, msgs ...interface{}) {
 		}
 	}
 
-	log.Print(
-		" | ", fmt.Sprintln(nonNilMsgs[1:]...), " |",
-		" request: ", req,
-		" | Error: ", errorlog(*err).errlog,
+	slogs := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		AddSource: true,
+		Level:     slog.LevelError,
+	}))
+
+	slogs.Error(
+		fmt.Sprintln(nonNilMsgs[1:]...),
+		slog.String("Error", errorlog(*err).errlog),
+		slog.Any("request", req),
 	)
 }
 

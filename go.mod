@@ -1,3 +1,4 @@
-module github.com/sulton0011/errs
+module errs
 
 go 1.21.0
+
