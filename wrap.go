@@ -7,7 +7,7 @@ package errs
 import (
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 )
 
 // Unwrap returns the result of calling the Unwrap method on err, if err's
@@ -73,26 +73,27 @@ func As(err error, target any) bool {
 // messages from the msgs arguments with the text of the original error.
 // It returns a new error with the combined data.
 // If err is nil, the function returns nil.
-func Wrap1(err *error, msgs ...interface{}) error {
-	if err == nil {
-		return *err
+
+func Wrap(e *error, msgs ...any) error {
+	if *e == nil {
+		return nil
 	}
 
-	var message string
+	err := errorlog((*e))
+
+	var nonNilMsgs []interface{}
 	for _, msg := range msgs {
 		if msg != nil {
-			if message != "" {
-				message += "--->"
-			}
-			message += fmt.Sprint(msg)
+			nonNilMsgs = append(nonNilMsgs, "--->", msg)
 		}
 	}
 
-	if message != "" {
-		*err = New(message + "--->" + (*err).Error())
+	if len(nonNilMsgs) != 0 {
+		err.errlog = fmt.Sprint(nonNilMsgs[1:]...)
 	}
 
-	return *err
+	(*e) = err
+	return (*e)
 }
 
 // WrapLog wraps an error with additional messages and performs logging.
@@ -101,26 +102,33 @@ func Wrap1(err *error, msgs ...interface{}) error {
 // messages from the msgs arguments with the text of the original error.
 // It then logs this message along with information about the request and error.
 // If err is nil, the function does not take any action.
-func WrapLog1(err *error, req interface{}, msgs ...interface{}) {
+func WrapLog(err *error, req interface{}, msgs ...interface{}) {
 	if *err == nil {
 		return
 	}
 
-	var message string
+	var nonNilMsgs []interface{}
 	for _, msg := range msgs {
 		if msg != nil {
-			if message != "" {
-				message += "--->"
-			}
-			message += fmt.Sprint(msg)
+			nonNilMsgs = append(nonNilMsgs, "--->", msg)
 		}
 	}
 
+	switch levelLogger {
+	case LevelInfo, LevelWarn:
+		slogs.
+			Error(
+				fmt.Sprint(nonNilMsgs[1:]...),
+				slog.String("Error", errorlog(*err).errlog),
+				slog.Any("request", req),
+			)
+	case LevelError, LevelDebug:
+		logs.
+			Error(
+				fmt.Sprint(nonNilMsgs[1:]...),
+				slog.Any("Error", errorlog(*err).errlog),
+				slog.Any("request", req),
+			)
+	}
 
-
-	log.Print(
-		message,
-		" request: ", req,
-		" Error: ", *err,
-	)
 }

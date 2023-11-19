@@ -5,12 +5,6 @@
 // because the former will succeed if err wraps an *fs.PathError.
 package errs
 
-import (
-	"fmt"
-	"log/slog"
-	"os"
-)
-
 // type Error struct {
 // 	Err error // error response
 // 	errorLog error // error logs
@@ -33,51 +27,6 @@ func (e *errorString) Error() string {
 
 func (e *errorString) ErrorLog() *errorString {
 	return e
-}
-
-func Wrap(e *error, msgs ...any) error {
-	if *e == nil {
-		return nil
-	}
-
-	err := errorlog((*e))
-
-	var nonNilMsgs []interface{}
-	for _, msg := range msgs {
-		if msg != nil {
-			nonNilMsgs = append(nonNilMsgs, "--->", msg)
-		}
-	}
-
-	if len(nonNilMsgs) != 0 {
-		err.errlog = fmt.Sprint(nonNilMsgs[1:]...)
-	}
-
-	(*e) = err
-	return (*e)
-}
-
-func WrapLog(err *error, req interface{}, msgs ...interface{}) {
-	if *err == nil {
-		return
-	}
-
-	var nonNilMsgs []interface{}
-	for _, msg := range msgs {
-		if msg != nil {
-			nonNilMsgs = append(nonNilMsgs, "--->", msg)
-		}
-	}
-
-	slogs := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level:     slog.LevelError,
-	}))
-
-	slogs.Error(
-		fmt.Sprint(nonNilMsgs[1:]...),
-		slog.String("Error", errorlog(*err).errlog),
-		slog.Any("request", req),
-	)
 }
 
 func errorlog(e error) *errorString {
