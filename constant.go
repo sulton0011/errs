@@ -10,7 +10,6 @@ import (
 type Level string
 
 const (
-
 	LevelDebug = "DEBUG"
 	LevelInfo  = "INFO"
 	LevelWarn  = "WARN"
@@ -21,29 +20,56 @@ var (
 	levelLogger Level = LevelError
 
 	stdoutLogger io.Writer
+
+	slogs *slog.Logger
+	logs  *slog.Logger
 )
 
 func UpdateLevel(level Level) {
 	levelLogger = level
 }
 
-func UpdateStdout(stdout io.Writer) {
-	stdoutLogger = stdout
-}
+func UpdateStdout(stdout *io.Writer) {
+	stdoutLogger = *stdout
 
-var (
-	slogs = slog.New(slog.NewJSONHandler(getStdoutLogger(stdoutLogger), &slog.HandlerOptions{
+	slogs = slog.New(slog.NewJSONHandler(*stdout, &slog.HandlerOptions{
 		AddSource: true,
-		Level: slogLevel(levelLogger),
+		Level:     slogLevel(levelLogger),
 	}))
 
-	logs = NewSlog(getStdoutLogger(stdoutLogger), PrettyHandlerOptions{
+	logs = NewSlog(*stdout, PrettyHandlerOptions{
 		SlogOpts: slog.HandlerOptions{
 			AddSource: true,
 			Level:     slogLevel(levelLogger),
 		},
 	})
-)
+}
+
+func sLoggerDefault() *slog.Logger {
+	if slogs != nil {
+		return slogs
+	}
+	slogs = slog.New(slog.NewJSONHandler(getStdoutLogger(stdoutLogger), &slog.HandlerOptions{
+		// AddSource: true,
+		Level: slogLevel(levelLogger),
+	}))
+	return slogs
+}
+
+func loggerDefault() *slog.Logger {
+	if logs != nil {
+		return logs
+	}
+	logs = NewSlog(getStdoutLogger(stdoutLogger), PrettyHandlerOptions{
+		SlogOpts: slog.HandlerOptions{
+			// AddSource: true,
+			Level: slogLevel(levelLogger),
+		},
+	})
+	return logs
+
+}
+
 
 type PrettyHandlerOptions struct {
 	SlogOpts slog.HandlerOptions
@@ -74,5 +100,5 @@ func getStdoutLogger(stdout io.Writer) io.Writer {
 		return stdout
 	}
 
-	return os.Stdout
+	return os.Stderr
 }

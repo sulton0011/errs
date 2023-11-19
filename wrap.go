@@ -89,7 +89,7 @@ func Wrap(e *error, msgs ...any) error {
 	}
 
 	if len(nonNilMsgs) != 0 {
-		err.errlog = fmt.Sprint(nonNilMsgs[1:]...)
+		err.errlog = fmt.Sprint(nonNilMsgs[1:]...) + "--->" + err.errlog
 	}
 
 	(*e) = err
@@ -116,14 +116,14 @@ func WrapLog(err *error, req interface{}, msgs ...interface{}) {
 
 	switch levelLogger {
 	case LevelInfo, LevelWarn:
-		slogs.
+		sLoggerDefault().
 			Error(
 				fmt.Sprint(nonNilMsgs[1:]...),
 				slog.String("Error", errorlog(*err).errlog),
 				slog.Any("request", req),
 			)
 	case LevelError, LevelDebug:
-		logs.
+		loggerDefault().
 			Error(
 				fmt.Sprint(nonNilMsgs[1:]...),
 				slog.Any("Error", errorlog(*err).errlog),
