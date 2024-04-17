@@ -11,8 +11,8 @@ import (
 	"github.com/fatih/color"
 )
 
-func NewSlog(out io.Writer, opts PrettyHandlerOptions) *slog.Logger {
-	h := &PrettyHandler{
+func newSlog(out io.Writer, opts prettyHandlerOptions) *slog.Logger {
+	h := &prettyHandler{
 		Handler: slog.NewJSONHandler(out, &opts.SlogOpts),
 		l:       log.New(out, "", 0),
 	}
@@ -20,7 +20,7 @@ func NewSlog(out io.Writer, opts PrettyHandlerOptions) *slog.Logger {
 	return slog.New(h)
 }
 
-func (h *PrettyHandler) Handle(ctx context.Context, r slog.Record) error {
+func (h *prettyHandler) Handle(ctx context.Context, r slog.Record) error {
 	level := r.Level.String() + ":"
 
 	switch r.Level {

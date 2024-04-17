@@ -107,28 +107,30 @@ func WrapLog(err *error, req interface{}, msgs ...interface{}) {
 		return
 	}
 
-	var nonNilMsgs []interface{}
-	for _, msg := range msgs {
-		if msg != nil {
-			nonNilMsgs = append(nonNilMsgs, "--->", msg)
+	go func(err *error, req interface{}, msgs ...interface{}) {
+		var nonNilMsgs []interface{}
+		for _, msg := range msgs {
+			if msg != nil {
+				nonNilMsgs = append(nonNilMsgs, "--->", msg)
+			}
 		}
-	}
 
-	switch levelLogger {
-	case LevelInfo, LevelWarn:
-		sLoggerDefault().
-			Error(
-				fmt.Sprint(nonNilMsgs[1:]...),
-				slog.String("Error", errorlog(*err).errlog),
-				slog.Any("request", req),
-			)
-	case LevelError, LevelDebug:
-		loggerDefault().
-			Error(
-				fmt.Sprint(nonNilMsgs[1:]...),
-				slog.Any("Error", errorlog(*err).errlog),
-				slog.Any("request", req),
-			)
-	}
+		switch levelLogger {
+		case LevelInfo, LevelWarn:
+			sLoggerDefault().
+				Error(
+					fmt.Sprint(nonNilMsgs[1:]...),
+					slog.String("Error", errorlog(*err).errlog),
+					slog.Any("request", req),
+				)
+		case LevelError, LevelDebug:
+			loggerDefault().
+				Error(
+					fmt.Sprint(nonNilMsgs[1:]...),
+					slog.Any("Error", errorlog(*err).errlog),
+					slog.Any("request", req),
+				)
+		}
+	}(err, req, msgs...)
 
 }

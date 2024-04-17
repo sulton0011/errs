@@ -7,17 +7,17 @@ import (
 	"os"
 )
 
-type Level string
+type level string
 
 const (
-	LevelDebug = "DEBUG"
-	LevelInfo  = "INFO"
-	LevelWarn  = "WARN"
-	LevelError = "ERROR"
+	LevelDebug level = "DEBUG"
+	LevelInfo  level = "INFO"
+	LevelWarn  level = "WARN"
+	LevelError level = "ERROR"
 )
 
 var (
-	levelLogger Level = LevelError
+	levelLogger = LevelError
 
 	stdoutLogger io.Writer
 
@@ -25,7 +25,7 @@ var (
 	logs  *slog.Logger
 )
 
-func UpdateLevel(level Level) {
+func UpdateLevel(level level) {
 	levelLogger = level
 }
 
@@ -37,7 +37,7 @@ func UpdateStdout(stdout *io.Writer) {
 		Level:     slogLevel(levelLogger),
 	}))
 
-	logs = NewSlog(*stdout, PrettyHandlerOptions{
+	logs = newSlog(*stdout, prettyHandlerOptions{
 		SlogOpts: slog.HandlerOptions{
 			AddSource: true,
 			Level:     slogLevel(levelLogger),
@@ -60,7 +60,7 @@ func loggerDefault() *slog.Logger {
 	if logs != nil {
 		return logs
 	}
-	logs = NewSlog(getStdoutLogger(stdoutLogger), PrettyHandlerOptions{
+	logs = newSlog(getStdoutLogger(stdoutLogger), prettyHandlerOptions{
 		SlogOpts: slog.HandlerOptions{
 			// AddSource: true,
 			Level: slogLevel(levelLogger),
@@ -70,17 +70,16 @@ func loggerDefault() *slog.Logger {
 
 }
 
-
-type PrettyHandlerOptions struct {
+type prettyHandlerOptions struct {
 	SlogOpts slog.HandlerOptions
 }
 
-type PrettyHandler struct {
+type prettyHandler struct {
 	slog.Handler
 	l *log.Logger
 }
 
-func slogLevel(level Level) slog.Level {
+func slogLevel(level level) slog.Level {
 	switch level {
 	case LevelDebug:
 		return slog.LevelDebug
