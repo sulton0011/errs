@@ -134,3 +134,7 @@ func WrapLog(err *error, req interface{}, msgs ...interface{}) {
 	}(err, req, msgs...)
 
 }
+
+func Error(err error) string {
+    return errorlog(err).errlog
+}
