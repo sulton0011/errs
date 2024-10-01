@@ -5,53 +5,138 @@ import (
 	"encoding/json"
 	"io"
 	"log"
-	"log/slog"
+	"os"
 	"strings"
+
+	"log/slog"
 
 	"github.com/fatih/color"
 )
 
-func newSlog(out io.Writer, opts prettyHandlerOptions) *slog.Logger {
-	h := &prettyHandler{
-		Handler: slog.NewJSONHandler(out, &opts.SlogOpts),
-		l:       log.New(out, "", 0),
-	}
+// Уровни логирования
+type level string
 
-	return slog.New(h)
+const (
+	LevelLocal   level = "LOCAL"   // Для локальной разработки (все уровни логирования).
+	LevelStaging level = "STAGING" // Для тестирования (ошибки и предупреждения).
+	LevelMaster  level = "MASTER"  // Для продакшена (только ошибки).
+)
+
+// Глобальные переменные для управления логгерами и потоками вывода.
+var (
+	currentLevel   = LevelMaster           // Текущий уровень логирования.
+	stdoutLogger   io.Writer = os.Stderr   // Логгер по умолчанию.
+	slogJSONLogger *slog.Logger            // JSON логгер.
+	slogTextLogger *slog.Logger            // Текстовый логгер.
+)
+
+// Инициализация логгеров при запуске.
+func init() {
+	updateLoggers()
 }
 
-func (h *prettyHandler) Handle(ctx context.Context, r slog.Record) error {
-	level := r.Level.String() + ":"
+// UpdateLevel обновляет текущий уровень логирования и пересоздает логгеры.
+func UpdateLevel(newLevel level) {
+	currentLevel = newLevel
+	updateLoggers()
+}
 
+// UpdateStdout обновляет поток вывода логов и пересоздает логгеры.
+func UpdateStdout(stdout io.Writer) {
+	if stdout != nil {
+		stdoutLogger = stdout
+	}
+	updateLoggers()
+}
+
+// updateLoggers создает новые JSON и текстовые логгеры на основе текущих настроек.
+func updateLoggers() {
+	slogJSONLogger = createLogger(stdoutLogger, slog.LevelError, "json")
+	slogTextLogger = createLogger(stdoutLogger, slog.LevelInfo, "text")
+}
+
+// createLogger создает новый логгер на основе переданного типа вывода (json или text).
+func createLogger(output io.Writer, baseLevel slog.Level, format string) *slog.Logger {
+	switch format {
+	case "json":
+		return slog.New(slog.NewJSONHandler(output, &slog.HandlerOptions{
+			AddSource: true,
+			Level:     determineLogLevel(),
+		}))
+	case "text":
+		return slog.New(newPrettyHandler(output, determineLogLevel()))
+	default:
+		return slog.New(slog.NewJSONHandler(output, &slog.HandlerOptions{
+			AddSource: true,
+			Level:     baseLevel,
+		}))
+	}
+}
+
+// determineLogLevel определяет уровень логирования на основе текущего уровня.
+func determineLogLevel() slog.Level {
+	switch currentLevel {
+	case LevelLocal:
+		return slog.LevelDebug // Все уровни логирования (DEBUG и выше).
+	case LevelStaging:
+		return slog.LevelWarn // Только предупреждения и ошибки.
+	case LevelMaster:
+		return slog.LevelError // Только ошибки.
+	default:
+		return slog.LevelError
+	}
+}
+
+// prettyHandler - структура для красивого текстового вывода логов.
+type prettyHandler struct {
+	slog.Handler
+	l *log.Logger
+}
+
+// newPrettyHandler создает новый обработчик для красивого текстового вывода логов.
+func newPrettyHandler(output io.Writer, lvl slog.Level) slog.Handler {
+	return &prettyHandler{
+		Handler: slog.NewJSONHandler(output, &slog.HandlerOptions{
+			AddSource: true,
+			Level:     lvl,
+		}),
+		l: log.New(output, "", log.LstdFlags),
+	}
+}
+
+// Handle реализует интерфейс slog.Handler и форматирует логи в текстовом виде.
+func (h *prettyHandler) Handle(ctx context.Context, r slog.Record) error {
+	// Определение цвета и форматирование строки уровня логирования.
+	levelStr := r.Level.String() + ":"
 	switch r.Level {
 	case slog.LevelDebug:
-		level = color.MagentaString(level)
+		levelStr = color.MagentaString(levelStr)
 	case slog.LevelInfo:
-		level = color.BlueString(level)
+		levelStr = color.BlueString(levelStr)
 	case slog.LevelWarn:
-		level = color.YellowString(level)
+		levelStr = color.YellowString(levelStr)
 	case slog.LevelError:
-		level = color.RedString(level)
+		levelStr = color.RedString(levelStr)
 	}
 
+	// Сбор атрибутов из логов в словарь.
 	fields := make(map[string]interface{}, r.NumAttrs())
 	r.Attrs(func(a slog.Attr) bool {
 		fields[a.Key] = a.Value.Any()
-
 		return true
 	})
 
-	b, err := json.MarshalIndent(fields, ``, `  `)
+	// Форматирование JSON строк.
+	b, err := json.MarshalIndent(fields, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	s := strings.ReplaceAll(string(b), `\u003e`, `>`)
+	// Удаление экранирования символов.
+	formattedString := strings.ReplaceAll(string(b), `\u003e`, `>`)
+	message := color.CyanString(r.Message)
 
-	timeStr := r.Time.Format("[02-01-2006 15:05:05.000]")
-	msg := color.CyanString(r.Message)
-
-	h.l.Println(timeStr, level, msg, color.WhiteString(s))
-
+	// Вывод логов с цветным форматированием.
+	h.l.Println(levelStr, message, color.WhiteString(formattedString))
 	return nil
 }
