@@ -1,73 +1,51 @@
-// Copyright 2023 The Go Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
-package errs_test
+package errs
 
 import (
-	// "errors"
-	"errors"
-	"fmt"
 	"testing"
 )
 
-func TestNewEqual(t *testing.T) {
+func TestNew(t *testing.T) {
+	message := "An error occurred"
+	err := New(message)
 
-	// Different allocations should not be equal.
-	if errors.New("abc") == errors.New("abc") {
-		t.Errorf(`New("abc") == New("abc")`)
-	}
-	if errors.New("abc") == errors.New("xyz") {
-		t.Errorf(`New("abc") == New("xyz")`)
+	if err == nil {
+		t.Fatal("Expected a non-nil error")
 	}
 
-	// Same allocation should be equal to itself (not crash).
-	err := errors.New("jkl")
-	if err != err {
-		t.Errorf(`err != err`)
+	if err.Error() != message {
+		t.Fatalf("Expected error message to be '%s', got '%s'", message, err.Error())
+	}
+
+	if Unwrap(err) != message {
+		t.Fatalf("Expected unwrapped message to be '%s', got '%s'", message, Unwrap(err))
 	}
 }
 
-func TestErrorMethod(t *testing.T) {
-	err := errors.New("abc")
-	if err.Error() != "abc" {
-		t.Errorf(`New("abc").Error() = %q, want %q`, err.Error(), "abc")
+func TestIs(t *testing.T) {
+	originalErr := New("Test error")
+
+	if !Is(originalErr, originalErr) {
+		t.Fatal("Expected Is to return true for the same error")
+	}
+
+	if Is(originalErr, nil) {
+		t.Fatal("Expected Is to return false when target is nil and error is not")
+	}
+
+	if !Is(nil, nil) {
+		t.Fatal("Expected Is to return true for two nil errors")
 	}
 }
 
-func ExampleNew() {
-	err := errors.New("emit macho dwarf: elf header corrupted")
-	if err != nil {
-		fmt.Print(err)
-	}
-	// Output: emit macho dwarf: elf header corrupted
-}
+func TestIsNil(t *testing.T) {
+	var nilErr error // This is a nil error
 
-// The fmt package's Errorf function lets us use the package's formatting
-// features to create descriptive error messages.
-func ExampleNew_errorf() {
-	const name, id = "bimmler", 17
-	err := fmt.Errorf("user %q (id %d) not found", name, id)
-	if err != nil {
-		fmt.Print(err)
+	if !IsNil(nilErr) {
+		t.Fatal("Expected IsNil to return true for a nil error")
 	}
-	// Output: user "bimmler" (id 17) not found
-}
 
-func ExampleJoin() {
-	err1 := errors.New("err1")
-	err2 := errors.New("err2")
-	err := errors.Join(err1, err2)
-	fmt.Println(err)
-	if errors.Is(err, err1) {
-		fmt.Println("err is err1")
+	notNilErr := New("Test error")
+	if IsNil(notNilErr) {
+		t.Fatal("Expected IsNil to return false for a non-nil error")
 	}
-	if errors.Is(err, err2) {
-		fmt.Println("err is err2")
-	}
-	// Output:
-	// err1
-	// err2
-	// err is err1
-	// err is err2
 }

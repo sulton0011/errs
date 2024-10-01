@@ -6,52 +6,71 @@ import (
 	"io"
 	"log"
 	"log/slog"
+	"os"
 	"strings"
 
 	"github.com/fatih/color"
 )
 
-func newSlog(out io.Writer, opts prettyHandlerOptions) *slog.Logger {
-	h := &prettyHandler{
-		Handler: slog.NewJSONHandler(out, &opts.SlogOpts),
-		l:       log.New(out, "", 0),
-	}
-
-	return slog.New(h)
+// newJSONLogger creates a new JSON logger for structured logging with no source path.
+func newJSONLogger(output io.Writer) *slog.Logger {
+	return slog.New(slog.NewJSONHandler(output, &slog.HandlerOptions{
+		AddSource: false, // Disable source file and line number information.
+		Level:     slog.LevelError,
+	}))
 }
 
-func (h *prettyHandler) Handle(ctx context.Context, r slog.Record) error {
-	level := r.Level.String() + ":"
+// newTextLogger creates a new text logger for human-readable logging with no source path.
+func newTextLogger(output io.Writer) *slog.Logger {
+	return slog.New(newPrettyHandler(output, slog.LevelError))
+}
 
-	switch r.Level {
-	case slog.LevelDebug:
-		level = color.MagentaString(level)
-	case slog.LevelInfo:
-		level = color.BlueString(level)
-	case slog.LevelWarn:
-		level = color.YellowString(level)
-	case slog.LevelError:
-		level = color.RedString(level)
+// newPrettyHandler creates a custom pretty handler for formatted logging.
+func newPrettyHandler(output io.Writer, lvl slog.Level) slog.Handler {
+	return &prettyHandler{
+		Handler: slog.NewJSONHandler(output, &slog.HandlerOptions{
+			AddSource: true,
+			Level:     lvl,
+		}),
+		l: log.New(output, "", log.LstdFlags),
 	}
+}
+
+// newFileLogger creates a logger that writes logs to a specified file without source paths.
+func newFileLogger(file *os.File) *slog.Logger {
+	return slog.New(slog.NewJSONHandler(file, &slog.HandlerOptions{
+		AddSource: false, // Disable source file and line number information for file logging.
+		Level:     slog.LevelError,
+	}))
+}
+
+// prettyHandler - custom handler for pretty text-based log output.
+type prettyHandler struct {
+	slog.Handler
+	l *log.Logger
+}
+
+// Handle implements slog.Handler and formats logs in a custom pretty text style.
+func (h *prettyHandler) Handle(ctx context.Context, r slog.Record) error {
+	levelStr := r.Level.String() + ":"
+	levelStr = color.RedString(levelStr)
 
 	fields := make(map[string]interface{}, r.NumAttrs())
 	r.Attrs(func(a slog.Attr) bool {
 		fields[a.Key] = a.Value.Any()
-
 		return true
 	})
 
-	b, err := json.MarshalIndent(fields, ``, `  `)
+	// Format JSON strings.
+	b, err := json.MarshalIndent(fields, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	s := strings.ReplaceAll(string(b), `\u003e`, `>`)
+	// Remove escaping of ">" symbol.
+	formattedString := strings.ReplaceAll(string(b), `\u003e`, `>`)
+	message := color.CyanString(r.Message)
 
-	timeStr := r.Time.Format("[02-01-2006 15:05:05.000]")
-	msg := color.CyanString(r.Message)
-
-	h.l.Println(timeStr, level, msg, color.WhiteString(s))
-
+	h.l.Println(levelStr, message, color.WhiteString(formattedString))
 	return nil
 }

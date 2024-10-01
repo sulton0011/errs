@@ -1,45 +1,37 @@
-// Copyright 2023 The Go Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
-// because the former will succeed if err wraps an *fs.PathError.
 package errs
 
-// type Error struct {
-// 	Err error // error response
-// 	errorLog error // error logs
-// }
+import "errors"
 
-// New returns an error that formats as the given text.
-// Each call to New returns a distinct error value even if the text is identical.
-func New(text string) error {
-	return &errorString{text, text}
-}
-
+// errorString - improved error structure that stores a message and the original error.
 type errorString struct {
-	errinfo string
-	errlog  string
+	message string // Detailed error message.
+	origErr string // Original error.
 }
 
-func (e *errorString) Error() string {
-	return e.errinfo
-}
-
-func (e *errorString) ErrorLog() *errorString {
-	return e
-}
-
-func errorlog(e error) *errorString {
-	err, ok := e.(interface {
-		ErrorLog() *errorString
-	})
-
-	if !ok {
-		if e == nil {
-			return nil
-		}
-		return errorlog(New(e.Error()))
+// New returns a new error that includes a message and the original error.
+func New(message string) error {
+	return &errorString{
+		message: message,
+		origErr: message,
 	}
+}
 
-	return err.ErrorLog()
+// Error implements the error interface, returning the original error message.
+func (e *errorString) Error() string {
+	return e.origErr
+}
+
+// Is checks if the target error is equal to the given error.
+// It returns true if they are the same or if the target error matches the original error.
+func Is(err, target error) bool {
+	if target == nil {
+		return err == nil
+	}
+	return errors.Is(err, target)
+}
+
+// IsNil checks if the provided error is nil.
+// It returns true if the error is nil, false otherwise.
+func IsNil(err error) bool {
+	return err == nil
 }
