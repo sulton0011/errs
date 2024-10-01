@@ -26,7 +26,7 @@ func Wrap(err error, args ...interface{}) error {
 	}
 }
 
-// Wrapf formats a string message using the provided format and arguments, 
+// Wrapf formats a string message using the provided format and arguments,
 // then wraps it around an existing error to add context.
 // Returns a new error with the formatted message and original error context.
 func Wrapf(err error, format string, args ...interface{}) error {
@@ -58,24 +58,21 @@ func logError(err error, req interface{}, msgs ...interface{}) {
 	errorPath := slog.String("Error Path", err.Error())
 
 	// Retrieve the logger based on the current logging level.
-	logger := getLogger()
-	logger.Error(
-		message,
-		errorPath,
-		slog.Any("request", req),
-	)
+	getLogger(message, errorPath, slog.Any("request", req))
 }
 
 // getLogger returns the appropriate logger based on the current logging level.
-// This determines whether to use the text or JSON logger.
-func getLogger() *slog.Logger {
+func getLogger(msg string, args ...any) {
 	switch currentLevel {
 	case LevelLocal:
-		return slogTextLogger // Use text logger for local development.
+		slogTextLogger.Error(msg, args...)
 	case LevelStaging, LevelMaster:
-		return slogJSONLogger // Use JSON logger for staging and production environments.
+		if fileLogger != nil {
+			fileLogger.Error(msg, args...)
+		}
+		slogJSONLogger.Error(msg, args...)
 	default:
-		return slogJSONLogger // Fallback to JSON logger.
+		slogJSONLogger.Error(msg, args...)
 	}
 }
 

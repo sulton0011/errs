@@ -3,97 +3,90 @@ package errs
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
-	"os"
-	"strings"
-
 	"log/slog"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/fatih/color"
 )
 
-// Уровни логирования
+// Define custom logging levels.
 type level string
 
 const (
-	LevelLocal   level = "LOCAL"   // Для локальной разработки (все уровни логирования).
-	LevelStaging level = "STAGING" // Для тестирования (ошибки и предупреждения).
-	LevelMaster  level = "MASTER"  // Для продакшена (только ошибки).
+	LevelLocal     level = "LOCAL"   // Local development logging level.
+	LevelStaging   level = "STAGING" // Staging environment logging level.
+	LevelMaster    level = "MASTER"  // Production (master) environment logging level.
+	DefaultLogFile       = "log/logger.json"
 )
 
-// Глобальные переменные для управления логгерами и потоками вывода.
+// Variables to manage the loggers and logging levels.
 var (
-	currentLevel   = LevelMaster           // Текущий уровень логирования.
-	stdoutLogger   io.Writer = os.Stderr   // Логгер по умолчанию.
-	slogJSONLogger *slog.Logger            // JSON логгер.
-	slogTextLogger *slog.Logger            // Текстовый логгер.
+	currentLevel   = LevelMaster // Default logging level.
+	slogJSONLogger *slog.Logger  // JSON logger for structured logging.
+	slogTextLogger *slog.Logger  // Text logger for human-readable logs.
+	fileLogger     *slog.Logger  // File logger for writing logs to a file.
 )
 
-// Инициализация логгеров при запуске.
+// Initializes loggers when the package is first loaded.
 func init() {
 	updateLoggers()
 }
 
-// UpdateLevel обновляет текущий уровень логирования и пересоздает логгеры.
+// UpdateLevel sets a new logging level and reinitializes the loggers.
 func UpdateLevel(newLevel level) {
 	currentLevel = newLevel
 	updateLoggers()
-}
-
-// UpdateStdout обновляет поток вывода логов и пересоздает логгеры.
-func UpdateStdout(stdout io.Writer) {
-	if stdout != nil {
-		stdoutLogger = stdout
+} // SetLogFile sets the log file path and configures the file logger.
+// This function should be called only for the Master level to log errors to a file.
+func SetLogFile(filePath string) error {
+	if filePath == "" {
+		return fmt.Errorf("invalid file path")
 	}
+
+	// Ensure the directory for the log file exists.
+	dir := filepath.Dir(filePath)
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create log directory: %w", err)
+	}
+
+	// Attempt to create or open the specified file with appropriate flags and permissions.
+	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		return fmt.Errorf("failed to set log file: %w", err)
+	}
+
+	// Create the file-based logger and update loggers.
+	fileLogger = newFileLogger(file)
 	updateLoggers()
+	return nil
 }
 
-// updateLoggers создает новые JSON и текстовые логгеры на основе текущих настроек.
+// updateLoggers creates new JSON and Text loggers based on the current settings.
 func updateLoggers() {
-	slogJSONLogger = createLogger(stdoutLogger, slog.LevelError, "json")
-	slogTextLogger = createLogger(stdoutLogger, slog.LevelInfo, "text")
+	// Create new JSON and text loggers for stdout output.
+	stdoutLogger := os.Stderr // Default to standard error output.
+	slogJSONLogger = newJSONLogger(stdoutLogger)
+	slogTextLogger = newTextLogger(stdoutLogger)
 }
 
-// createLogger создает новый логгер на основе переданного типа вывода (json или text).
-func createLogger(output io.Writer, baseLevel slog.Level, format string) *slog.Logger {
-	switch format {
-	case "json":
-		return slog.New(slog.NewJSONHandler(output, &slog.HandlerOptions{
-			AddSource: true,
-			Level:     determineLogLevel(),
-		}))
-	case "text":
-		return slog.New(newPrettyHandler(output, determineLogLevel()))
-	default:
-		return slog.New(slog.NewJSONHandler(output, &slog.HandlerOptions{
-			AddSource: true,
-			Level:     baseLevel,
-		}))
-	}
+// newJSONLogger creates a new JSON logger for structured logging with no source path.
+func newJSONLogger(output io.Writer) *slog.Logger {
+	return slog.New(slog.NewJSONHandler(output, &slog.HandlerOptions{
+		AddSource: false, // Disable source file and line number information.
+		Level:     slog.LevelError,
+	}))
 }
 
-// determineLogLevel определяет уровень логирования на основе текущего уровня.
-func determineLogLevel() slog.Level {
-	switch currentLevel {
-	case LevelLocal:
-		return slog.LevelDebug // Все уровни логирования (DEBUG и выше).
-	case LevelStaging:
-		return slog.LevelWarn // Только предупреждения и ошибки.
-	case LevelMaster:
-		return slog.LevelError // Только ошибки.
-	default:
-		return slog.LevelError
-	}
+// newTextLogger creates a new text logger for human-readable logging with no source path.
+func newTextLogger(output io.Writer) *slog.Logger {
+	return slog.New(newPrettyHandler(output, slog.LevelError))
 }
 
-// prettyHandler - структура для красивого текстового вывода логов.
-type prettyHandler struct {
-	slog.Handler
-	l *log.Logger
-}
-
-// newPrettyHandler создает новый обработчик для красивого текстового вывода логов.
 func newPrettyHandler(output io.Writer, lvl slog.Level) slog.Handler {
 	return &prettyHandler{
 		Handler: slog.NewJSONHandler(output, &slog.HandlerOptions{
@@ -104,39 +97,41 @@ func newPrettyHandler(output io.Writer, lvl slog.Level) slog.Handler {
 	}
 }
 
-// Handle реализует интерфейс slog.Handler и форматирует логи в текстовом виде.
-func (h *prettyHandler) Handle(ctx context.Context, r slog.Record) error {
-	// Определение цвета и форматирование строки уровня логирования.
-	levelStr := r.Level.String() + ":"
-	switch r.Level {
-	case slog.LevelDebug:
-		levelStr = color.MagentaString(levelStr)
-	case slog.LevelInfo:
-		levelStr = color.BlueString(levelStr)
-	case slog.LevelWarn:
-		levelStr = color.YellowString(levelStr)
-	case slog.LevelError:
-		levelStr = color.RedString(levelStr)
-	}
+// newFileLogger creates a logger that writes logs to a specified file without source paths.
+func newFileLogger(file *os.File) *slog.Logger {
+	return slog.New(slog.NewJSONHandler(file, &slog.HandlerOptions{
+		AddSource: false, // Disable source file and line number information for file logging.
+		Level:     slog.LevelError,
+	}))
+}
 
-	// Сбор атрибутов из логов в словарь.
+// prettyHandler - custom handler for pretty text-based log output.
+type prettyHandler struct {
+	slog.Handler
+	l *log.Logger
+}
+
+// Handle implements slog.Handler and formats logs in a custom pretty text style.
+func (h *prettyHandler) Handle(ctx context.Context, r slog.Record) error {
+	levelStr := r.Level.String() + ":"
+	levelStr = color.RedString(levelStr)
+
 	fields := make(map[string]interface{}, r.NumAttrs())
 	r.Attrs(func(a slog.Attr) bool {
 		fields[a.Key] = a.Value.Any()
 		return true
 	})
 
-	// Форматирование JSON строк.
+	// Format JSON strings.
 	b, err := json.MarshalIndent(fields, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	// Удаление экранирования символов.
+	// Remove escaping of ">" symbol.
 	formattedString := strings.ReplaceAll(string(b), `\u003e`, `>`)
 	message := color.CyanString(r.Message)
 
-	// Вывод логов с цветным форматированием.
 	h.l.Println(levelStr, message, color.WhiteString(formattedString))
 	return nil
 }
