@@ -31,17 +31,17 @@ func TestWrap(t *testing.T) {
 	}
 }
 
-func TestWrapf(t *testing.T) {
+func TestWrapF(t *testing.T) {
 	// Test wrapping a nil error with formatting
 	var nilErr error
-	result := Wrapf(nilErr, "Formatted error: %s", "extra info")
+	result := WrapF(nilErr, "Formatted error: %s", "extra info")
 	if result != nil {
 		t.Fatal("Expected nil result when wrapping a nil error")
 	}
 
 	// Test wrapping a non-nil error with formatting
 	originalErr := New("Original error")
-	wrappedErr := Wrapf(originalErr, "Formatted error: %s", "additional info")
+	wrappedErr := WrapF(originalErr, "Formatted error: %s", "additional info")
 
 	if wrappedErr == nil {
 		t.Fatal("Expected a non-nil wrapped error")
@@ -91,5 +91,36 @@ func TestUnwrap(t *testing.T) {
 	expectedMessage := "Context ---> Original error"
 	if unwrappedMessage != expectedMessage {
 		t.Fatalf("Expected unwrapped message to be '%s', got '%s'", expectedMessage, unwrappedMessage)
+	}
+}
+
+func TestUnwrapE(t *testing.T) {
+	// Test unwrapping a non-wrapped error
+	originalErr := New("Original error")
+	unwrappedErr := UnwrapE(originalErr)
+
+	if unwrappedErr.Error() != originalErr.Error() {
+		t.Fatalf("Expected unwrapped error to be '%v', got '%v'", originalErr, unwrappedErr)
+	}
+
+	// Test unwrapping a wrapped error
+	wrappedErr := Wrap(originalErr, "Context")
+	unwrappedErr = UnwrapE(wrappedErr)
+
+	if unwrappedErr == nil {
+		t.Fatal("Expected unwrapped error to be non-nil when wrapped error is provided")
+	}
+
+	expectedMessage := "Context ---> Original error"
+	if unwrappedErr.Error() != expectedMessage {
+		t.Fatalf("Expected unwrapped error message to be '%s', got '%s'", expectedMessage, unwrappedErr.Error())
+	}
+
+	// Test unwrapping a wrapped error with an empty message
+	emptyWrappedErr := Wrap(originalErr, "")
+	unwrappedErr = UnwrapE(emptyWrappedErr)
+
+	if unwrappedErr == nil {
+		t.Fatalf("Expected unwrapped error to be nil when wrapped error has an empty message")
 	}
 }

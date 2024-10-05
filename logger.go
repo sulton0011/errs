@@ -62,15 +62,12 @@ func (h *prettyHandler) Handle(ctx context.Context, r slog.Record) error {
 	})
 
 	// Format JSON strings.
-	b, err := json.MarshalIndent(fields, "", "  ")
+	formattedJSON, err := json.MarshalIndent(fields, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	// Remove escaping of ">" symbol.
-	formattedString := strings.ReplaceAll(string(b), `\u003e`, `>`)
-	message := color.CyanString(r.Message)
-
-	h.l.Println(levelStr, message, color.WhiteString(formattedString))
+	formattedMessage := strings.ReplaceAll(string(formattedJSON), `\u003e`, `>`)
+	h.l.Println(levelStr, color.CyanString(r.Message), color.WhiteString(formattedMessage))
 	return nil
 }
