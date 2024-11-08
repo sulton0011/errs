@@ -60,11 +60,9 @@ func wrap(err error, args ...any) error {
 	// Join the provided arguments into a single message string.
 	message := JoinMsg(separator, args...)
 
-	// Combine the new message with the original error's message.
-	fullMessage := JoinMsg(separator, message, Unwrap(err))
-
 	return &errorString{
-		message: fullMessage,
+		// Combine the new message with the original error's message.
+		message: JoinMsg(separator, message, Unwrap(err)),
 		origErr: err.Error(),
 	}
 }
@@ -83,12 +81,16 @@ func wrap(err error, args ...any) error {
 //     If the error is not wrapped, it returns the error message as is.
 //     If the provided error is nil, it returns an empty string.
 func Unwrap(err error) string {
+	if err == nil {
+		return ""
+	}
+
 	u, ok := err.(*errorString)
 	if !ok {
 		return err.Error()
 	}
 
-	return u.message
+	return u.unwrap()
 }
 
 // UnwrapE unwraps a wrapped error and returns the original error message as a new error.
@@ -103,10 +105,16 @@ func Unwrap(err error) string {
 //     If the error is not wrapped, it returns the error as is.
 //     If the original message is empty, it returns nil.
 func UnwrapE(err error) error {
-	if e, ok := err.(*errorString); ok && e.message != "" {
-		return New(e.message)
+	if err == nil {
+		return nil
 	}
-	return err
+
+	e, ok := err.(*errorString)
+	if !ok {
+		return err
+	}
+
+	return New(e.unwrap())
 }
 
 // Log asynchronously logs an error with additional context messages and a request object.

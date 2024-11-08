@@ -124,3 +124,41 @@ func TestUnwrapE(t *testing.T) {
 		t.Fatalf("Expected unwrapped error to be nil when wrapped error has an empty message")
 	}
 }
+
+func TestWrap_NilError(t *testing.T) {
+	err := Wrap(nil, "additional context")
+	if err != nil {
+		t.Errorf("Wrap(nil) = %v, want nil", err)
+	}
+}
+
+func TestWrapF_NilError(t *testing.T) {
+	err := WrapF(nil, "failed to %s", "execute")
+	if err != nil {
+		t.Errorf("WrapF(nil) = %v, want nil", err)
+	}
+}
+
+func TestUnwrap_NilError(t *testing.T) {
+	result := Unwrap(nil)
+	if result != "" {
+		t.Errorf("Unwrap(nil) = %v, want empty string", result)
+	}
+}
+
+func TestUnwrapE_NilError(t *testing.T) {
+	err := UnwrapE(nil)
+	if err != nil {
+		t.Errorf("UnwrapE(nil) = %v, want nil", err)
+	}
+}
+
+func TestLog_NilError(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("Log(nil) panicked, want no panic")
+		}
+	}()
+
+	Log(nil, "request", "some message")
+}

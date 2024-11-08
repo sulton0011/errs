@@ -41,10 +41,6 @@ func TestJoinMsg_ErrorsWithNumbersAndLetters(t *testing.T) {
 		t.Errorf("Expected original error '%s', but got '%s'", expectedOrigErr, result.Error())
 	}
 
-	if result.Error() != expectedOrigErr {
-		t.Errorf("Expected original error '%s', but got '%s'", expectedOrigErr, result.Error())
-	}
-
 	if errs.Unwrap(result) != expectedMessage {
 		t.Errorf("Expected message '%s', but got '%s'", expectedMessage, errs.Unwrap(result))
 	}

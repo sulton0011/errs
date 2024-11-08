@@ -30,22 +30,15 @@ func New(message string) error {
 	}
 }
 
-// NewF creates a new error with a formatted message and the original error.//+
-// It uses the fmt.Sprintf function to format the message using the provided format and arguments.//+
-// The function returns a new errorString instance with the formatted message and the original error.//+
+// NewF returns a new error with a formatted message.
 //
-// Parameters:
-// - format: A string that specifies the format of the error message.//+
-// - a: A variadic parameter that accepts any number of arguments to be used in the format string.//+
+// The function takes two parameters:
+// - format: A format string that specifies how the error message should be constructed.
+// - a: Variadic arguments that are used to populate the format string.
 //
-// Returns:
-// - An error that contains the formatted message and the original error.//+
+// The function returns an error that contains the formatted message.
 func NewF(format string, a ...any) error {
-	msg := fmt.Sprintf(format, a...)
-	return &errorString{
-		message: msg,
-		origErr: msg,
-	}
+	return New(fmt.Sprintf(format, a...))
 }
 
 // Error implements the error interface, returning the original error message.
@@ -64,6 +57,22 @@ func (e *errorString) Error() string {
 	return e.origErr
 }
 
+// Unwrap returns the detailed error message stored in the errorString instance.
+// It implements the Unwrap method from the errors.Unwrap interface, allowing for chaining of errors.
+//
+// Parameters:
+// - e: A pointer to the errorString instance.
+//
+// Returns:
+// - A string representing the detailed error message.
+func (e *errorString) unwrap() string {
+	if e == nil {
+		return ""
+	}
+
+	return e.message
+}
+
 // Is checks if the target error is equal to the given error.
 // It returns true if they are the same or if the target error matches the original error.
 //
@@ -78,6 +87,7 @@ func Is(err, target error) bool {
 	if target == nil {
 		return err == nil
 	}
+
 	return errors.Is(err, target)
 }
 
