@@ -1,6 +1,7 @@
 package errs
 
 import (
+	"bytes"
 	"fmt"
 	"log/slog"
 	"os"
@@ -17,10 +18,16 @@ const (
 	DefaultLogFile         = "log/logger.json" // Default log file path.
 )
 
+// Global variable to hold the bot instance
+var bot *BroadcastBot
+
 // Variables to manage the loggers and logging levels.
 var (
-	separator   string
-	fileLogger  *os.File
+	separator  string
+	fileLogger *os.File
+	jsonLogger *slog.Logger
+	jsonBuf    *bytes.Buffer
+
 	slogLoggers []*slog.Logger // List of loggers.
 )
 
@@ -50,7 +57,8 @@ func SetLogTypes(types ...LogType) {
 	for _, t := range types {
 		switch t {
 		case LogTypeJSON:
-			slogLoggers = append(slogLoggers, newJSONLogger(os.Stderr))
+			jsonLogger = newJSONLogger(os.Stderr)
+			slogLoggers = append(slogLoggers, jsonLogger)
 		case LogTypeText:
 			slogLoggers = append(slogLoggers, newTextLogger(os.Stderr))
 		case LogTypeFile:

@@ -1,6 +1,7 @@
 package errs
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -14,7 +15,10 @@ import (
 
 // newJSONLogger creates a new JSON logger for structured logging with no source path.
 func newJSONLogger(output io.Writer) *slog.Logger {
-	return slog.New(slog.NewJSONHandler(output, &slog.HandlerOptions{
+	jsonBuf = &bytes.Buffer{}
+	mw := io.MultiWriter(output, jsonBuf)
+
+	return slog.New(slog.NewJSONHandler(mw, &slog.HandlerOptions{
 		AddSource: false, // Disable source file and line number information.
 		Level:     slog.LevelError,
 	}))

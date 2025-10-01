@@ -3,6 +3,7 @@ package errs
 import (
 	"fmt"
 	"log/slog"
+	"strings"
 )
 
 // Wrap adds context to an existing error by wrapping it with additional messages.
@@ -167,15 +168,34 @@ func logError(err error, req any, msgs ...any) {
 
 // getLogger retrieves and logs an error message with additional context using the appropriate logger.
 // It iterates through a list of sloggers and asynchronously logs the error message with the provided arguments.
+// If a bot is configured, it also sends the error message to the configured Telegram chats.
 //
 // Parameters:
 //   - msg: A string representing the error message to be logged.
 //   - args: Variadic arguments representing additional context to be logged alongside the error message.
 //
 // Returns:
-//   - This function does not return any value. It logs the error message asynchronously using the slogLoggers.
+//   - This function does not return any value. It logs the error message asynchronously.
 func getLogger(msg string, args ...any) {
+	// Log to all configured loggers
 	for _, slog := range slogLoggers {
 		go slog.Error(msg, args...)
+	}
+
+	// Always log to jsonLogger
+	if jsonLogger != nil {
+		jsonLogger.Error(msg, args...)
+	}
+
+	// Send JSON log to Telegram
+	if bot != nil && jsonBuf != nil {
+		logMsg := strings.TrimSpace(jsonBuf.String())
+		jsonBuf.Reset() // old loglarni тозалаш
+
+		if err := bot.sendMessage(fmt.Sprintf("```json\n%s\n```", logMsg)); err != nil {
+			for _, slog := range slogLoggers {
+				go slog.Error("Failed to send message to Telegram", "error", err.Error())
+			}
+		}
 	}
 }

@@ -4,6 +4,7 @@ go 1.21.0
 
 require (
 	github.com/fatih/color v1.16.0
+	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	go.uber.org/zap v1.26.0
 )
 
