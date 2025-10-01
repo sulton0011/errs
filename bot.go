@@ -5,32 +5,43 @@ import (
 )
 
 // BroadcastBot struct handles sending messages to multiple Telegram chats
-type BroadcastBot struct {
+type broadcastBot struct {
 	bot     *botV5.BotAPI
 	chatIDs []int64
+	trimSpace bool
+}
+
+type BroadcastBotParams struct {
+	ServiceName string
+	Token       string
+	ChatIDs     []int64
+	TrimSpace   bool
 }
 
 // NewBroadcastBot creates a new instance of BroadcastBot
-func NewBroadcastBot(token string, chatIDs []int64) error {
-	if token == "" || len(chatIDs) == 0 {
+func NewBroadcastBot(params BroadcastBotParams) error {
+	if params.Token == "" || len(params.ChatIDs) == 0 {
 		return New("Failed to create Telegram bot. Invalid token or chat ID.")
 	}
 
-	b, err := botV5.NewBotAPI(token)
+	sTitle = params.ServiceName
+
+	b, err := botV5.NewBotAPI(params.Token)
 	if err != nil {
 		return Wrap(err, "failed to create telegram bot")
 	}
 
-	bot = &BroadcastBot{
+	bot = &broadcastBot{
 		bot:     b,
-		chatIDs: chatIDs,
+		chatIDs: params.ChatIDs,
+		trimSpace: params.TrimSpace,
 	}
 
 	return nil
 }
 
 // SendMessage sends a message to all configured chat IDs
-func (bb *BroadcastBot) sendMessage(msg string) error {
+func (bb *broadcastBot) sendMessage(msg string) error {
 	var errs error
 	for _, chatID := range bb.chatIDs {
 		if err := bb.sendToChat(chatID, msg); err != nil {
@@ -41,7 +52,7 @@ func (bb *BroadcastBot) sendMessage(msg string) error {
 }
 
 // sendToChat sends a message to a specific chat ID
-func (bb *BroadcastBot) sendToChat(chatID int64, msg string) error {
+func (bb *broadcastBot) sendToChat(chatID int64, msg string) error {
 	m := botV5.NewMessage(chatID, msg)
 	m.ParseMode = "Markdown"
 	_, err := bb.bot.Send(m)

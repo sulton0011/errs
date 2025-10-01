@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 )
 
 // Wrap adds context to an existing error by wrapping it with additional messages.
@@ -189,10 +190,15 @@ func getLogger(msg string, args ...any) {
 
 	// Send JSON log to Telegram
 	if bot != nil && jsonBuf != nil {
-		logMsg := strings.TrimSpace(jsonBuf.String())
-		jsonBuf.Reset() // old loglarni тозалаш
+		jsonMsg := jsonBuf.String()
+		jsonBuf.Reset()
 
-		if err := bot.sendMessage(fmt.Sprintf("```json\n%s\n```", logMsg)); err != nil {
+		if bot.trimSpace {
+			jsonMsg = strings.TrimSpace(jsonMsg)
+		}
+
+		logMsg := fmt.Sprintf("Service Name: %s\nT: %s\n```json\n%s\n```", sTitle, time.Now().Format(time.RFC3339Nano), jsonMsg)
+		if err := bot.sendMessage(logMsg); err != nil {
 			for _, slog := range slogLoggers {
 				go slog.Error("Failed to send message to Telegram", "error", err.Error())
 			}

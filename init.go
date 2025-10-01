@@ -19,14 +19,15 @@ const (
 )
 
 // Global variable to hold the bot instance
-var bot *BroadcastBot
+var bot *broadcastBot
 
 // Variables to manage the loggers and logging levels.
 var (
-	separator  string
-	fileLogger *os.File
-	jsonLogger *slog.Logger
-	jsonBuf    *bytes.Buffer
+	sTitle string
+	separator   string
+	fileLogger  *os.File
+	jsonLogger  *slog.Logger
+	jsonBuf     *bytes.Buffer
 
 	slogLoggers []*slog.Logger // List of loggers.
 )
@@ -103,7 +104,6 @@ func SetLogFile(filePath string) error {
 
 	return nil
 }
-
 
 // SetSupervisorErr sets the separator used for logging errors from the supervisor.
 // This separator is appended to the error message before logging it.
