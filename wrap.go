@@ -1,6 +1,8 @@
 package errs
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -195,9 +197,20 @@ func getLogger(msg string, args ...any) {
 
 		if bot.trimSpace {
 			jsonMsg = strings.TrimSpace(jsonMsg)
+		} else {
+			var prettyJSON bytes.Buffer
+			if err := json.Indent(&prettyJSON, []byte(jsonMsg), "", "  "); err == nil {
+				jsonMsg = prettyJSON.String()
+			}
 		}
 
-		logMsg := fmt.Sprintf("Service Name: %s\nT: %s\n```json\n%s\n```", sTitle, time.Now().Format(time.RFC3339Nano), jsonMsg)
+		logMsg := fmt.Sprintf(
+			"Service Name: %s\nT: %s\n```json\n%s\n```",
+			sTitle,
+			time.Now().Format(time.RFC3339Nano),
+			jsonMsg,
+		)
+
 		if err := bot.sendMessage(logMsg); err != nil {
 			for _, slog := range slogLoggers {
 				go slog.Error("Failed to send message to Telegram", "error", err.Error())
